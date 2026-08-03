@@ -1,9 +1,9 @@
 const User = require("./userDB");
 const Content = require("./contentDb");
-const Like = require("./likeDb");
-const Comment = require("./commentDb");
-const Save = require("./saveDb");
-const Share = require("./shareDb");
+const Like = require("./likeDB");
+const Comment = require("./commentDB");
+const Save = require("./saveDB");
+const Share = require("./shareDB");
 
 // User <-> Content
 User.hasMany(Content, { foreignKey: "userId", as: "contents" });
