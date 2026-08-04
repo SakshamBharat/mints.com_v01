@@ -27,6 +27,14 @@ const { Sequelize } = require("sequelize");
 router.get('/', authMiddleware, (req, res) => {
     res.send('Index');
 });
+app.get("/test-mail", async (req,res)=>{
+    try {
+        await transporter.verify();
+        res.send("SMTP OK");
+    } catch(err){
+        res.send(err.message);
+    }
+});
 
 router.post('/register', async (req, res) => {
 
