@@ -1,40 +1,69 @@
 const nodemailer = require("nodemailer");
+const dns = require("dns");
 require("dotenv").config();
 
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  family: 4,
+  port: 465,
+  secure: true,
+
   auth: {
     user: process.env.EMAIL,
     pass: process.env.EMAIL_PASSWORD,
   },
+
+  // Force IPv4 (fixes ENETUNREACH IPv6 errors)
+  lookup: (hostname, options, callback) => {
+    dns.lookup(hostname, { family: 4 }, callback);
+  },
+
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 30000,
 });
 
-const sendOTP = async (email, otp) => {
+async function verifyEmailServer() {
   try {
-    console.log("1. Starting sendOTP");
+    await transporter.verify();
+    console.log("✅ SMTP connection ready");
+  } catch (error) {
+    console.error("❌ SMTP connection failed:", error.message);
+  }
+}
 
-    const info = await transporter.sendMail({
-      from: process.env.EMAIL,
+verifyEmailServer();
+
+
+async function sendOTP(email, otp) {
+  try {
+    console.log("Starting sendOTP");
+
+    const result = await transporter.sendMail({
+      from: `"Your App Name" <${process.env.EMAIL}>`,
       to: email,
       subject: "Your OTP Verification Code",
+
       html: `
-        <h2>Email Verification</h2>
-        <p>Your OTP is:</p>
-        <h1>${otp}</h1>
-        <p>This OTP will expire in 5 minutes.</p>
+        <div style="font-family:Arial">
+          <h2>Email Verification</h2>
+          <p>Your OTP is:</p>
+          <h1>${otp}</h1>
+          <p>This OTP expires in 5 minutes.</p>
+        </div>
       `,
     });
 
-    console.log("2. EMAIL SENT:", info.messageId);
+    console.log("✅ OTP Email Sent:", result.messageId);
 
-    return info;
+    return result;
+
   } catch (error) {
-    console.error("3. EMAIL ERROR:", error);
+    console.error("❌ OTP EMAIL ERROR:", error);
     throw error;
   }
-};
+}
 
-module.exports = { sendOTP, transporter };
+
+module.exports = {
+  sendOTP,
+};
