@@ -14,8 +14,7 @@ const transporter = nodemailer.createTransport({
 
 const sendOTP = async (email, otp) => {
   try {
-    console.log("EMAIL:", process.env.EMAIL);
-    console.log("PASSWORD EXISTS:", !!process.env.EMAIL_PASSWORD);
+    console.log("1. Starting sendOTP");
 
     const info = await transporter.sendMail({
       from: process.env.EMAIL,
@@ -29,11 +28,11 @@ const sendOTP = async (email, otp) => {
       `,
     });
 
-    console.log("OTP EMAIL SENT:", info.messageId);
+    console.log("2. EMAIL SENT:", info.messageId);
 
     return info;
   } catch (error) {
-    console.error("OTP EMAIL ERROR:", error);
+    console.error("3. EMAIL ERROR:", error);
     throw error;
   }
 };
