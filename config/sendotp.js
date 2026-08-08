@@ -4,32 +4,18 @@ require("dotenv").config();
 const transporter = nodemailer.createTransport({
     host: "smtp.one.com",
     port: 587,
-    secure: false, // STARTTLS
+    secure: false,
 
     auth: {
         user: process.env.EMAIL,
         pass: process.env.EMAIL_PASSWORD
     },
 
-    connectionTimeout: 50000,
-    greetingTimeout: 50000,
-    socketTimeout: 50000
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000
 });
 
-// Test SMTP
-async function verifyEmailServer() {
-    try {
-        await transporter.verify();
-        console.log("✅ One.com SMTP Connected");
-    } catch (error) {
-        console.log("❌ SMTP ERROR:", error.message);
-        console.log("Code:", error.code);
-    }
-}
-
-verifyEmailServer();
-
-// Send OTP
 async function sendOTP(email, otp) {
     try {
         console.log("Sending OTP to:", email);
@@ -40,7 +26,7 @@ async function sendOTP(email, otp) {
             subject: "Your OTP Verification Code",
 
             html: `
-                <div style="font-family:Arial">
+                <div style="font-family: Arial;">
                     <h2>Email Verification</h2>
                     <p>Your OTP is:</p>
                     <h1>${otp}</h1>
@@ -54,41 +40,10 @@ async function sendOTP(email, otp) {
         return result;
 
     } catch (error) {
-        console.log("❌ OTP Sending Failed:", error.message);
-        console.log("Code:", error.code);
-
+        console.error("❌ OTP Sending Failed:", error);
         throw error;
     }
 }
-
-module.exports = {
-    sendOTP,
-    transporter
-};
-        console.log(
-            "✅ OTP Sent:",
-            result.messageId
-        );
-
-
-        return result;
-
-
-    }catch(error){
-
-        console.log(
-            "❌ OTP Sending Failed:",
-            error.message
-        );
-
-
-        throw error;
-
-    }
-
-}
-
-
 
 module.exports = {
     sendOTP,
