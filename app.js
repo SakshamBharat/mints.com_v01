@@ -10,7 +10,7 @@ const Comment = require("./models/commentDB");
 const bcrypt = require('bcrypt');
 const otpGenerator = require('otp-generator')
 const { log } = require('console');
-const { sendOTP, transporter } = require("./config/sendotp");
+const sendOTP = require("./config/sendotp");
 const jwt = require("jsonwebtoken");
 const { or } = require('sequelize');
 const { Op } = require('sequelize');
@@ -26,15 +26,6 @@ const { Sequelize } = require("sequelize");
 
 router.get('/', authMiddleware, (req, res) => {
     res.send('Index');
-});
-
-router.get("/test-mail", async (req,res)=>{
-    try {
-        await transporter.verify();
-        res.send("SMTP OK");
-    } catch(err){
-        res.send(err.message);
-    }
 });
 
 router.post('/register', async (req, res) => {
