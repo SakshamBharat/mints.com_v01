@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-const Content = require("../models/contentDb");
-const User = require("../models/userDB");
+const Content = require("./models/contentDb");
+const User = require("./models/userDB");
 
 
 // ============================================================
