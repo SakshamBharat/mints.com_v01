@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 require("./models"); 
 const router = require("./app");
+const deepLinkRoutes = require("./deepLinkRouter");
 const { sequelize } = require("./config/connectoDB");
 const cookieParser = require("cookie-parser");
 require("./models/index");
@@ -12,6 +13,7 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/api', router);
+app.use("/", deepLinkRoutes);
 
 
 async function Server() {
