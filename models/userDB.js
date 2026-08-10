@@ -29,6 +29,11 @@ const User = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    coins: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    allowNull: false
+}
   },{
     tableName: "User",
     timestamps: true,

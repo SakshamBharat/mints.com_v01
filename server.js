@@ -4,6 +4,8 @@ require("./models");
 const router = require("./app");
 const { sequelize } = require("./config/connectoDB");
 const cookieParser = require("cookie-parser");
+require("./models/index");
+
 
 app.use(express.json());
 app.use(cookieParser());

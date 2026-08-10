@@ -1,5 +1,13 @@
 const express = require('express');
 const router = express.Router();
+require("./models/index");
+
+
+
+
+
+
+
 const User = require("./models/userDB");
 const PendingUser = require("./models/pendingUser");
 const Content = require("./models/contentDb");
@@ -7,6 +15,13 @@ const Like = require("./models/likeDB");
 const Save = require("./models/saveDB");
 const Share = require("./models/shareDB");
 const Comment = require("./models/commentDB");
+const WatchHistory = require("./models/watchHistoryDB");
+
+
+
+
+
+
 const bcrypt = require('bcrypt');
 const otpGenerator = require('otp-generator')
 const { log } = require('console');
@@ -24,9 +39,18 @@ const { Sequelize } = require("sequelize");
 
 
 
+
 router.get('/', authMiddleware, (req, res) => {
     res.send('Index');
 });
+
+
+
+
+
+
+
+
 
 router.post('/register', async (req, res) => {
 
@@ -235,6 +259,11 @@ router.post("/verify_otp", async (req, res) => {
 
 });
 
+
+
+
+
+
 router.post("/resend_otp", async (req, res) => {
 
     try {
@@ -331,6 +360,10 @@ router.post("/resend_otp", async (req, res) => {
 });
 
 
+
+
+
+
 router.post("/login", async (req, res) => {
     try {
         const { userCredential, password } = req.body;
@@ -398,6 +431,11 @@ router.post("/login", async (req, res) => {
         });
     }
 });
+
+
+
+
+
 
 router.get("/me/profile", authMiddleware, async (req, res) => {
     try {
@@ -487,6 +525,9 @@ router.post("/upload", authMiddleware, upload.single("reel"), async (req, res) =
 }
 );
 
+
+
+
 router.delete("/content/:id", authMiddleware, async (req, res) => {
     try {
 
@@ -549,10 +590,8 @@ router.delete("/content/:id", authMiddleware, async (req, res) => {
 
 
 
-
 router.get("/reels/feed", authMiddleware, async (req, res) => {
     try {
-
         const userId = req.user.id;
 
         const page = parseInt(req.query.page) || 1;
@@ -560,10 +599,14 @@ router.get("/reels/feed", authMiddleware, async (req, res) => {
 
         const offset = (page - 1) * limit;
 
-
         const { count, rows } = await Content.findAndCountAll({
 
             include: [
+
+                // ====================================================
+                // USER
+                // ====================================================
+
                 {
                     model: User,
                     as: "user",
@@ -574,212 +617,255 @@ router.get("/reels/feed", authMiddleware, async (req, res) => {
                     ]
                 },
 
+                // ====================================================
+                // LIKES
+                // ====================================================
+
                 {
                     model: Like,
+                    as: "likes",
                     attributes: [
                         "userId"
+                    ],
+                    required: false
+                },
+
+                // ====================================================
+                // COMMENTS
+                // ====================================================
+
+                {
+                    model: Comment,
+                    as: "comments",
+                    attributes: [
+                        "id"
                     ],
                     required: false
                 }
             ],
 
-
             attributes: {
-                exclude: ["cloudinaryPublicId"]
+                exclude: [
+                    "cloudinaryPublicId"
+                ]
             },
-
 
             order: Sequelize.literal("RANDOM()"),
 
             limit,
-            offset
-        });
+            offset,
 
+            distinct: true
+        });
 
         const reels = rows.map(reel => {
 
-            const likes = reel.Likes || [];
+            const reelJson = reel.toJSON();
 
+            const likeList = reelJson.likes || [];
+            const commentList = reelJson.comments || [];
 
-            const liked = likes.some(
+            const liked = likeList.some(
                 like => like.userId === userId
             );
 
+            delete reelJson.likes;
+            delete reelJson.comments;
 
             return {
+                ...reelJson,
 
-                ...reel.toJSON(),
-
-                likes: likes.length,
+                likes: likeList.length,
 
                 liked: liked,
 
-                // remove Like objects from response
-                Likes: undefined
+                comments: commentList.length
             };
-
         });
 
 
-
         return res.status(200).json({
-
             success: true,
 
             pagination: {
                 totalReels: count,
                 currentPage: page,
-                totalPages: Math.ceil(count / limit),
+                totalPages: Math.ceil(
+                    count / limit
+                ),
                 limit
             },
 
             data: reels
         });
 
-
-
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "GET REELS FEED ERROR:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
             error: error.message
         });
-
     }
 });
 
-router.post("/reels/:id/like", authMiddleware, async (req, res) => {
-  try {
-    const contentId = req.params.id;
-    const userId = req.user.id;
-
-    // Check if the user has already liked this reel
-    const existingLike = await Like.findOne({
-      where: {
-        userId,
-        contentId,
-      },
-    });
-
-    // Already liked -> do not allow another like
-    if (existingLike) {
-      const count = await Like.count({
-        where: {
-          contentId,
-        },
-      });
-
-      return res.status(200).json({
-        success: true,
-        liked: true,
-        likes: count,
-        message: "You have already liked this reel.",
-      });
-    }
-
-    // First time like
-    await Like.create({
-      userId,
-      contentId,
-    });
-
-    const count = await Like.count({
-      where: {
-        contentId,
-      },
-    });
-
-    return res.status(201).json({
-      success: true,
-      liked: true,
-      likes: count,
-      message: "Reel liked successfully.",
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
 
 
 
-router.post("/reels/:id/save", authMiddleware, async(req,res)=>{
-
-    try{
-
-        const contentId=req.params.id;
-        const userId=req.user.id;
 
 
-        const saved = await Save.findOne({
-            where:{
-                userId,
-                contentId
+router.post(
+    "/reels/:id/like",
+    authMiddleware,
+    async (req, res) => {
+
+        try {
+
+            const contentId = req.params.id;
+            const userId = req.user.id;
+
+            // ==================================================
+            // CHECK EXISTING LIKE
+            // ==================================================
+
+            const existingLike = await Like.findOne({
+                where: {
+                    userId,
+                    contentId,
+                },
+            });
+
+            // ==================================================
+            // UNLIKE
+            // ==================================================
+
+            if (existingLike) {
+
+                await existingLike.destroy();
+
+                const count = await Like.count({
+                    where: {
+                        contentId,
+                    },
+                });
+
+                return res.status(200).json({
+
+                    success: true,
+
+                    liked: false,
+
+                    likes: count,
+
+                    message: "Reel unliked successfully",
+
+                });
+
             }
-        });
 
+            // ==================================================
+            // LIKE
+            // ==================================================
 
+            await Like.create({
+                userId,
+                contentId,
+            });
 
-        if(saved){
-
-            await saved.destroy();
-
+            const count = await Like.count({
+                where: {
+                    contentId,
+                },
+            });
 
             return res.status(200).json({
-                success:true,
-                saved:false
+
+                success: true,
+
+                liked: true,
+
+                likes: count,
+
+                message: "Reel liked successfully",
+
+            });
+
+        } catch (error) {
+
+            console.error(
+                "LIKE ERROR:",
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                message: error.message,
             });
 
         }
 
+    }
+);
 
+
+router.post("/reels/:id/save", authMiddleware, async (req, res) => {
+    try {
+        const contentId = req.params.id;
+        const userId = req.user.id;
+
+        const saved = await Save.findOne({
+            where: {
+                userId,
+                contentId,
+            },
+        });
+
+        if (saved) {
+            await saved.destroy();
+
+            return res.status(200).json({
+                success: true,
+                saved: false,
+            });
+        }
 
         await Save.create({
-
             userId,
-            contentId
-
+            contentId,
         });
 
-
-
-        return res.status(201).json({
-
-            success:true,
-            saved:true
-
+        return res.status(200).json({
+            success: true,
+            saved: true,
         });
 
-
-
-    }catch(error){
-
-        res.status(500).json({
-            success:false,
-            message:error.message
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
         });
-
     }
-
 });
 
-router.post("/reels/:id/share",authMiddleware,async(req,res)=>{
 
 
-    try{
+router.post("/reels/:id/share", authMiddleware, async (req, res) => {
 
 
-        const contentId=req.params.id;
+    try {
+
+
+        const contentId = req.params.id;
 
 
         await Share.create({
 
-            userId:req.user.id,
+            userId: req.user.id,
 
             contentId
 
@@ -787,9 +873,9 @@ router.post("/reels/:id/share",authMiddleware,async(req,res)=>{
 
 
 
-        const count=await Share.count({
+        const count = await Share.count({
 
-            where:{
+            where: {
                 contentId
             }
 
@@ -799,19 +885,19 @@ router.post("/reels/:id/share",authMiddleware,async(req,res)=>{
 
         res.status(201).json({
 
-            success:true,
+            success: true,
 
-            shares:count
+            shares: count
 
         });
 
 
 
-    }catch(error){
+    } catch (error) {
 
         res.status(500).json({
-            success:false,
-            message:error.message
+            success: false,
+            message: error.message
         });
 
     }
@@ -819,183 +905,587 @@ router.post("/reels/:id/share",authMiddleware,async(req,res)=>{
 
 });
 
-router.post("/reels/:id/comments",
-authMiddleware,
-async(req,res)=>{
 
 
-try{
 
+// GET COMMENTS
+// ============================================================
 
-const contentId=req.params.id;
+router.get("/reels/:id/comments", authMiddleware, async (req, res) => {
+    try {
 
-const {comment}=req.body;
+        const contentId = req.params.id;
 
+        const content = await Content.findByPk(contentId);
 
-if(!comment){
+        if (!content) {
+            return res.status(404).json({
+                success: false,
+                message: "Reel not found"
+            });
+        }
 
-return res.status(400).json({
-message:"Comment required"
+        const comments = await Comment.findAll({
+
+            where: {
+                contentId: contentId
+            },
+
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                    attributes: [
+                        "id",
+                        "userName",
+                        "fullName"
+                    ]
+                }
+            ],
+
+            order: [
+                ["createdAt", "DESC"]
+            ]
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: comments
+        });
+
+    } catch (error) {
+
+        console.error(
+            "GET COMMENTS ERROR:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
 });
 
-}
-
-
-
-const newComment=await Comment.create({
-
-userId:req.user.id,
-
-contentId,
-
-comment
-
-});
-
-
-
-res.status(201).json({
-
-success:true,
-
-data:newComment
-
-});
-
-
-
-}catch(error){
-
-res.status(500).json({
-success:false,
-message:error.message
-});
-
-}
-
-
-});
-
-router.get("/reels/:id/comments",
-authMiddleware,
-async(req,res)=>{
-
-
-try{
-
-
-const comments=await Comment.findAll({
-
-where:{
-contentId:req.params.id
-},
-
-
-include:[
-{
-model:User,
-attributes:[
-"id",
-"userName",
-"fullName"
-]
-}
-],
-
-
-order:[
-["createdAt","DESC"]
-]
-
-
-});
-
-
-
-res.status(200).json({
-
-success:true,
-
-count:comments.length,
-
-data:comments
-
-});
-
-
-
-}catch(error){
-
-res.status(500).json({
-success:false,
-message:error.message
-});
-
-}
-
-
-});
-
-
-
-
-router.delete("/comments/:id",
-authMiddleware,
-async(req,res)=>{
-
-
-try{
-
-
-const comment=await Comment.findOne({
-
-where:{
-id:req.params.id,
-userId:req.user.id
-}
-
-});
-
-
-
-if(!comment){
-
-return res.status(404).json({
-
-message:"Comment not found"
-
-});
-
-}
-
-
-
-await comment.destroy();
-
-
-
-res.json({
-
-success:true,
-
-message:"Comment deleted"
-
+// CREATE COMMENT
+// ============================================================
+
+router.post("/reels/:id/comments", authMiddleware, async (req, res) => {
+    try {
+
+        const contentId = req.params.id;
+        const userId = req.user.id;
+
+        const { comment } = req.body;
+
+        if (!comment || !comment.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: "Comment required"
+            });
+        }
+
+        if (comment.trim().length > 500) {
+            return res.status(400).json({
+                success: false,
+                message: "Comment cannot exceed 500 characters"
+            });
+        }
+
+        const content = await Content.findByPk(contentId);
+
+        if (!content) {
+            return res.status(404).json({
+                success: false,
+                message: "Reel not found"
+            });
+        }
+
+        const newComment = await Comment.create({
+            userId: userId,
+            contentId: contentId,
+            comment: comment.trim()
+        });
+
+        const commentWithUser = await Comment.findOne({
+
+            where: {
+                id: newComment.id
+            },
+
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                    attributes: [
+                        "id",
+                        "userName",
+                        "fullName"
+                    ]
+                }
+            ]
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: "Comment added successfully",
+            data: commentWithUser
+        });
+
+    } catch (error) {
+
+        console.error(
+            "ADD COMMENT ERROR:",
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
 });
 
 
+// DELETE OWN COMMENT
+// ============================================================
 
-}catch(error){
+router.delete("/comments/:id", authMiddleware, async (req, res) => {
+    try {
+        const commentId = req.params.id;
+        const userId = req.user.id;
 
-res.status(500).json({
+        const comment = await Comment.findOne({
+            where: {
+                id: commentId,
+                userId: userId
+            }
+        });
 
-message:error.message
+        if (!comment) {
+            return res.status(404).json({
+                success: false,
+                message: "Comment not found or you don't have permission"
+            });
+        }
 
+        await comment.destroy();
+
+        return res.status(200).json({
+            success: true,
+            message: "Comment deleted successfully"
+        });
+
+    } catch (error) {
+        console.error("DELETE COMMENT ERROR:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
 });
 
-}
 
 
-});
+
+
+
+
+
+
+// ============================================================
+// SAVE WATCH HISTORY
+// Does NOT give a coin.
+// History is saved as soon as user watches 1%.
+// ============================================================
+
+router.post(
+    "/watch-history/:id",
+    authMiddleware,
+    async (req, res) => {
+
+        try {
+
+            const contentId = req.params.id;
+            const userId = req.user.id;
+
+            // ==================================================
+            // CHECK REEL
+            // ==================================================
+
+            const content = await Content.findByPk(contentId);
+
+            if (!content) {
+
+                return res.status(404).json({
+                    success: false,
+                    message: "Reel not found",
+                });
+
+            }
+
+            // ==================================================
+            // CHECK EXISTING HISTORY
+            // ==================================================
+
+            let history = await WatchHistory.findOne({
+                where: {
+                    userId,
+                    contentId,
+                },
+            });
+
+            // ==================================================
+            // ALREADY EXISTS
+            // ==================================================
+
+            if (history) {
+
+                return res.status(200).json({
+                    success: true,
+                    alreadyExists: true,
+                    coinEarned: history.coinEarned === true,
+                    data: history,
+                    message: "Reel already exists in watch history",
+                });
+
+            }
+
+            // ==================================================
+            // CREATE HISTORY
+            // ==================================================
+
+            history = await WatchHistory.create({
+                userId,
+                contentId,
+                coinEarned: false,
+            });
+
+            return res.status(201).json({
+                success: true,
+                alreadyExists: false,
+                coinEarned: false,
+                data: history,
+                message: "Reel added to watch history",
+            });
+
+        } catch (error) {
+
+            console.error(
+                "SAVE WATCH HISTORY ERROR:",
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                message: "Internal server error",
+                error: error.message,
+            });
+
+        }
+
+    }
+);
+
+
+// ============================================================
+// CLAIM WATCH COIN
+//
+// Called only after 80% of reel has been watched.
+//
+// One user + one reel = maximum 1 coin.
+// ============================================================
+
+router.post(
+    "/watch-history/:id/coin",
+    authMiddleware,
+    async (req, res) => {
+
+        const transaction =
+            await WatchHistory.sequelize.transaction();
+
+        try {
+
+            const contentId = req.params.id;
+            const userId = req.user.id;
+
+            // ==================================================
+            // CHECK REEL
+            // ==================================================
+
+            const content = await Content.findByPk(
+                contentId,
+                {
+                    transaction,
+                }
+            );
+
+            if (!content) {
+
+                await transaction.rollback();
+
+                return res.status(404).json({
+                    success: false,
+                    message: "Reel not found",
+                });
+
+            }
+
+            // ==================================================
+            // FIND HISTORY
+            // ==================================================
+
+            let history = await WatchHistory.findOne({
+                where: {
+                    userId,
+                    contentId,
+                },
+                transaction,
+
+                // Prevent two simultaneous coin requests.
+                lock: transaction.LOCK.UPDATE,
+            });
+
+            // ==================================================
+            // IF HISTORY DOES NOT EXIST
+            //
+            // This can happen if the 1% request failed but
+            // the 80% request succeeded.
+            //
+            // Create it here safely.
+            // ==================================================
+
+            if (!history) {
+
+                history = await WatchHistory.create(
+                    {
+                        userId,
+                        contentId,
+                        coinEarned: false,
+                    },
+                    {
+                        transaction,
+                    }
+                );
+
+            }
+
+            // ==================================================
+            // ALREADY CLAIMED
+            // ==================================================
+
+            if (history.coinEarned === true) {
+
+                const user = await User.findByPk(
+                    userId,
+                    {
+                        attributes: [
+                            "id",
+                            "coins",
+                        ],
+                        transaction,
+                    }
+                );
+
+                await transaction.commit();
+
+                return res.status(200).json({
+                    success: true,
+                    alreadyClaimed: true,
+                    coinEarned: 0,
+                    totalCoins: user ? user.coins : 0,
+                    message: "Coin already earned for this reel",
+                });
+
+            }
+
+            // ==================================================
+            // MARK COIN EARNED
+            // ==================================================
+
+            await history.update(
+                {
+                    coinEarned: true,
+                },
+                {
+                    transaction,
+                }
+            );
+
+            // ==================================================
+            // ADD ONE COIN
+            // ==================================================
+
+            await User.increment(
+                "coins",
+                {
+                    by: 1,
+
+                    where: {
+                        id: userId,
+                    },
+
+                    transaction,
+                }
+            );
+
+            // ==================================================
+            // GET NEW BALANCE
+            // ==================================================
+
+            const user = await User.findByPk(
+                userId,
+                {
+                    attributes: [
+                        "id",
+                        "coins",
+                    ],
+                    transaction,
+                }
+            );
+
+            await transaction.commit();
+
+            return res.status(200).json({
+                success: true,
+                alreadyClaimed: false,
+                coinEarned: 1,
+                totalCoins: user ? user.coins : 0,
+                message: "1 coin earned!",
+            });
+
+        } catch (error) {
+
+            try {
+                await transaction.rollback();
+            } catch (_) {}
+
+            console.error(
+                "CLAIM WATCH COIN ERROR:",
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                message: "Internal server error",
+                error: error.message,
+            });
+
+        }
+
+    }
+);
+
+
+// ============================================================
+// GET WATCH HISTORY
+// ============================================================
+
+router.get(
+    "/watch-history",
+    authMiddleware,
+    async (req, res) => {
+
+        try {
+
+            const userId = req.user.id;
+
+            // ==================================================
+            // HISTORY
+            // ==================================================
+
+            const history =
+                await WatchHistory.findAll({
+
+                    where: {
+                        userId,
+                    },
+
+                    include: [
+                        {
+                            model: Content,
+                            as: "content",
+
+                            attributes: [
+                                "id",
+                                "title",
+                                "hashtags",
+                                "contentUri",
+                                "thumbnailUri",
+                                "contentType",
+                                "createdAt",
+                            ],
+
+                            include: [
+                                {
+                                    model: User,
+                                    as: "user",
+
+                                    attributes: [
+                                        "id",
+                                        "fullName",
+                                        "userName",
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+
+                    order: [
+                        ["createdAt", "DESC"],
+                    ],
+                });
+
+
+            // ==================================================
+            // REAL COIN BALANCE
+            // ==================================================
+
+            const user = await User.findByPk(
+                userId,
+                {
+                    attributes: [
+                        "id",
+                        "coins",
+                    ],
+                }
+            );
+
+
+            return res.status(200).json({
+
+                success: true,
+
+                totalCoins: user
+                    ? Number(user.coins || 0)
+                    : 0,
+
+                data: history,
+
+            });
+
+        } catch (error) {
+
+            console.error(
+                "GET WATCH HISTORY ERROR:",
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                message: "Internal server error",
+                error: error.message,
+            });
+
+        }
+
+    }
+);
+
+
 
 module.exports = router;
 
