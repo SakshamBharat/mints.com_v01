@@ -1,5 +1,5 @@
 const { DataTypes } = require("sequelize");
-const sequelize = require("../config/db"); // use your actual sequelize path
+const { sequelize } = require("../config/connectoDB");
 
 const WatchHistory = sequelize.define(
     "WatchHistory",
