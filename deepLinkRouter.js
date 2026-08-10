@@ -4,47 +4,37 @@ const router = express.Router();
 const Content = require("./models/contentDb");
 const User = require("./models/userDB");
 
-
 // ============================================================
-// OPEN / SHARE REEL
+// PUBLIC SHARED REEL
 //
-// This is NOT an API endpoint.
-// This URL is shared publicly:
-//
+// URL:
 // https://mints-com-v001.onrender.com/reels/123
 //
-// If the Mints app is installed, Android/iOS should intercept
-// the URL and open the app.
+// Android App Links:
+// If Mints is installed and verified, Android opens the app.
 //
-// If the app is NOT installed, this route provides a web fallback.
+// If Mints is not installed, this HTML page is shown.
 // ============================================================
 
 router.get("/reels/:id", async (req, res) => {
-
     try {
-
         const contentId = req.params.id;
 
-        const content = await Content.findByPk(
-            contentId,
-            {
-                include: [
-                    {
-                        model: User,
-                        as: "user",
-                        attributes: [
-                            "id",
-                            "fullName",
-                            "userName"
-                        ]
-                    }
-                ]
-            }
-        );
-
+        const content = await Content.findByPk(contentId, {
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                    attributes: [
+                        "id",
+                        "fullName",
+                        "userName"
+                    ]
+                }
+            ]
+        });
 
         if (!content) {
-
             return res.status(404).send(`
                 <!DOCTYPE html>
                 <html>
@@ -60,12 +50,11 @@ router.get("/reels/:id", async (req, res) => {
                     <h2>Reel not found</h2>
                     <p>This reel may have been deleted.</p>
                 </body>
-
                 </html>
             `);
-
         }
 
+        const title = content.title || "Mints Reel";
 
         return res.send(`
             <!DOCTYPE html>
@@ -73,18 +62,18 @@ router.get("/reels/:id", async (req, res) => {
 
             <head>
 
-                <title>
-                    ${content.title || "Mints Reel"}
-                </title>
+                <meta charset="UTF-8">
 
                 <meta
                     name="viewport"
                     content="width=device-width, initial-scale=1.0"
                 >
 
+                <title>${title} - Mints</title>
+
                 <meta
                     property="og:title"
-                    content="${content.title || "Mints Reel"}"
+                    content="${title}"
                 >
 
                 <meta
@@ -94,26 +83,22 @@ router.get("/reels/:id", async (req, res) => {
 
                 ${
                     content.thumbnailUri
-                    ? `
-                    <meta
-                        property="og:image"
-                        content="${content.thumbnailUri}"
-                    >
-                    `
-                    : ""
+                        ? `
+                        <meta
+                            property="og:image"
+                            content="${content.thumbnailUri}"
+                        >
+                        `
+                        : ""
                 }
 
             </head>
 
             <body>
 
-                <h2>
-                    ${content.title || "Mints Reel"}
-                </h2>
+                <h2>${title}</h2>
 
-                <p>
-                    Shared from Mints
-                </p>
+                <p>Shared from Mints</p>
 
                 <p>
                     Open this link in the Mints app to watch the reel.
@@ -132,10 +117,7 @@ router.get("/reels/:id", async (req, res) => {
         );
 
         return res.status(500).send("Server error");
-
     }
-
 });
-
 
 module.exports = router;

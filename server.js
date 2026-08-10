@@ -16,7 +16,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
     "/.well-known",
     express.static(
-        path.join(__dirname, "public/.well-known")
+        path.join(__dirname, ".well-known"),
+        {
+            setHeaders: (res) => {
+                res.setHeader("Content-Type", "application/json");
+            }
+        }
     )
 );
 app.use('/api', router);

@@ -5,9 +5,9 @@
     ],
     "target": {
       "namespace": "android_app",
-      "package_name": "YOUR_PACKAGE_NAME",
+      "package_name": "com.sakshambharat.mints.mints",
       "sha256_cert_fingerprints": [
-        "YOUR_SHA256_FINGERPRINT"
+        "DE:20:99:78:5A:7B:70:BD:F5:81:7A:E6:9C:23:80:74:42:0E:F4:D6:CA:6E:1A:27:C6:1E:A6:1D:0E:8F:BE:D7"
       ]
     }
   }
