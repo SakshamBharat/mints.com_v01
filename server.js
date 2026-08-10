@@ -6,12 +6,19 @@ const deepLinkRoutes = require("./deepLinkRouter");
 const { sequelize } = require("./config/connectoDB");
 const cookieParser = require("cookie-parser");
 require("./models/index");
+const path = require("path");
 
 
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
+app.use(
+    "/.well-known",
+    express.static(
+        path.join(__dirname, "public/.well-known")
+    )
+);
 app.use('/api', router);
 app.use("/", deepLinkRoutes);
 
