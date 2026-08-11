@@ -1484,7 +1484,55 @@ router.get(
     }
 );
 
+router.get("/api/reels/:id", async (req, res) => {
+    try {
+        const contentId = req.params.id;
 
+        const content = await Content.findByPk(contentId, {
+            attributes: [
+                "id",
+                "title",
+                "hashtags",
+                "contentUri",
+                "thumbnailUri",
+                "contentType",
+                "createdAt"
+            ],
+
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                    attributes: [
+                        "id",
+                        "fullName",
+                        "userName"
+                    ]
+                }
+            ]
+        });
+
+        if (!content) {
+            return res.status(404).json({
+                success: false,
+                message: "Reel not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: content
+        });
+
+    } catch (error) {
+        console.error("GET SINGLE REEL ERROR:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
+    }
+});
 
 module.exports = router;
 
