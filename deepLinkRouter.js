@@ -4,60 +4,85 @@ const router = express.Router();
 const Content = require("./models/contentDb");
 const User = require("./models/userDB");
 
-// ============================================================
-// PUBLIC SHARED REEL
-//
-// URL:
-// https://mints-com-v001.onrender.com/reels/123
-//
-// Android App Links:
-// If Mints is installed and verified, Android opens the app.
-//
-// If Mints is not installed, this HTML page is shown.
-// ============================================================
-
 router.get("/reels/:id", async (req, res) => {
+
     try {
+
         const contentId = req.params.id;
 
-        const content = await Content.findByPk(contentId, {
-            include: [
-                {
-                    model: User,
-                    as: "user",
-                    attributes: [
-                        "id",
-                        "fullName",
-                        "userName"
-                    ]
-                }
-            ]
-        });
+        console.log(
+            "PUBLIC REEL REQUEST:",
+            contentId
+        );
+
+        const content = await Content.findByPk(
+            contentId,
+            {
+                include: [
+                    {
+                        model: User,
+                        as: "user",
+                        attributes: [
+                            "id",
+                            "fullName",
+                            "userName"
+                        ]
+                    }
+                ]
+            }
+        );
 
         if (!content) {
+
             return res.status(404).send(`
                 <!DOCTYPE html>
+
                 <html>
+
                 <head>
-                    <title>Reel Not Found - Mints</title>
+
+                    <meta charset="UTF-8">
+
                     <meta
                         name="viewport"
                         content="width=device-width, initial-scale=1.0"
                     >
+
+                    <title>Reel Not Found - Mints</title>
+
                 </head>
 
                 <body>
+
                     <h2>Reel not found</h2>
-                    <p>This reel may have been deleted.</p>
+
+                    <p>
+                        This reel may have been deleted.
+                    </p>
+
                 </body>
+
                 </html>
             `);
+
         }
 
-        const title = content.title || "Mints Reel";
+        const title =
+            content.title || "Mints Reel";
+
+        const description =
+            "Watch this reel on Mints";
+
+        const thumbnail =
+            content.thumbnailUri || "";
+
+        const url =
+            `https://mints-com-v001.onrender.com/reels/${content.id}`;
 
         return res.send(`
+
             <!DOCTYPE html>
+
             <html>
 
             <head>
@@ -69,7 +94,21 @@ router.get("/reels/:id", async (req, res) => {
                     content="width=device-width, initial-scale=1.0"
                 >
 
-                <title>${title} - Mints</title>
+                <title>
+                    ${title} - Mints
+                </title>
+
+                <meta
+                    name="description"
+                    content="${description}"
+                >
+
+                <!-- Open Graph -->
+
+                <meta
+                    property="og:type"
+                    content="video.other"
+                >
 
                 <meta
                     property="og:title"
@@ -78,16 +117,49 @@ router.get("/reels/:id", async (req, res) => {
 
                 <meta
                     property="og:description"
-                    content="Watch this reel on Mints"
+                    content="${description}"
                 >
 
                 ${
-                    content.thumbnailUri
+                    thumbnail
                         ? `
-                        <meta
-                            property="og:image"
-                            content="${content.thumbnailUri}"
-                        >
+                            <meta
+                                property="og:image"
+                                content="${thumbnail}"
+                            >
+                        `
+                        : ""
+                }
+
+                <meta
+                    property="og:url"
+                    content="${url}"
+                >
+
+                <!-- Twitter -->
+
+                <meta
+                    name="twitter:card"
+                    content="summary_large_image"
+                >
+
+                <meta
+                    name="twitter:title"
+                    content="${title}"
+                >
+
+                <meta
+                    name="twitter:description"
+                    content="${description}"
+                >
+
+                ${
+                    thumbnail
+                        ? `
+                            <meta
+                                name="twitter:image"
+                                content="${thumbnail}"
+                            >
                         `
                         : ""
                 }
@@ -98,15 +170,19 @@ router.get("/reels/:id", async (req, res) => {
 
                 <h2>${title}</h2>
 
-                <p>Shared from Mints</p>
+                <p>
+                    Shared from Mints
+                </p>
 
                 <p>
-                    Open this link in the Mints app to watch the reel.
+                    Open this link in the Mints app
+                    to watch the reel.
                 </p>
 
             </body>
 
             </html>
+
         `);
 
     } catch (error) {
@@ -116,26 +192,12 @@ router.get("/reels/:id", async (req, res) => {
             error
         );
 
-        return res.status(500).send("Server error");
+        return res.status(500).send(
+            "Server error"
+        );
+
     }
+
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 module.exports = router;
