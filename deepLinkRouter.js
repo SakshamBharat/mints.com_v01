@@ -1,4 +1,5 @@
 const express = require("express");
+
 const router = express.Router();
 
 const Content = require("./models/contentDb");
@@ -10,27 +11,33 @@ router.get("/reels/:id", async (req, res) => {
 
         const contentId = req.params.id;
 
+        console.log("=================================");
+        console.log("PUBLIC REEL REQUEST");
+        console.log("PARAM ID:", contentId);
+        console.log("=================================");
+
+        /*
+        |--------------------------------------------------------------------------
+        | Find Reel
+        |--------------------------------------------------------------------------
+        */
+
+        const content = await Content.findOne({
+            where: {
+                id: contentId
+            }
+        });
+
         console.log(
-            "PUBLIC REEL REQUEST:",
-            contentId
+            "CONTENT FOUND:",
+            content ? content.toJSON() : null
         );
 
-        const content = await Content.findByPk(
-            contentId,
-            {
-                include: [
-                    {
-                        model: User,
-                        as: "user",
-                        attributes: [
-                            "id",
-                            "fullName",
-                            "userName"
-                        ]
-                    }
-                ]
-            }
-        );
+        /*
+        |--------------------------------------------------------------------------
+        | Reel does not exist
+        |--------------------------------------------------------------------------
+        */
 
         if (!content) {
 
@@ -40,21 +47,22 @@ router.get("/reels/:id", async (req, res) => {
                 <html>
 
                 <head>
-
                     <meta charset="UTF-8">
-
                     <meta
                         name="viewport"
                         content="width=device-width, initial-scale=1.0"
                     >
 
                     <title>Reel Not Found - Mints</title>
-
                 </head>
 
                 <body>
 
                     <h2>Reel not found</h2>
+
+                    <p>
+                        Reel ID: ${contentId}
+                    </p>
 
                     <p>
                         This reel may have been deleted.
@@ -64,8 +72,30 @@ router.get("/reels/:id", async (req, res) => {
 
                 </html>
             `);
-
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Get User
+        |--------------------------------------------------------------------------
+        */
+
+        const user = await User.findByPk(
+            content.userId,
+            {
+                attributes: [
+                    "id",
+                    "fullName",
+                    "userName"
+                ]
+            }
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Reel Information
+        |--------------------------------------------------------------------------
+        */
 
         const title =
             content.title || "Mints Reel";
@@ -76,10 +106,22 @@ router.get("/reels/:id", async (req, res) => {
         const thumbnail =
             content.thumbnailUri || "";
 
+        /*
+        |--------------------------------------------------------------------------
+        | PUBLIC SHARE URL
+        |--------------------------------------------------------------------------
+        */
+
         const url =
             `https://mints-com-v001.onrender.com/reels/${content.id}`;
 
-        return res.send(`
+        /*
+        |--------------------------------------------------------------------------
+        | HTML
+        |--------------------------------------------------------------------------
+        */
+
+        return res.status(200).send(`
 
             <!DOCTYPE html>
 
@@ -170,6 +212,12 @@ router.get("/reels/:id", async (req, res) => {
 
                 <h2>${title}</h2>
 
+                ${
+                    user
+                        ? `<p>@${user.userName}</p>`
+                        : ""
+                }
+
                 <p>
                     Shared from Mints
                 </p>
@@ -195,9 +243,7 @@ router.get("/reels/:id", async (req, res) => {
         return res.status(500).send(
             "Server error"
         );
-
     }
-
 });
 
 module.exports = router;
