@@ -9,7 +9,7 @@ const sendOTP = async (email, otp) => {
     try {
         await brevo.transactionalEmails.sendTransacEmail({
             sender: {
-                name: "Your App",
+                name: "Mints.com",
                 email: process.env.EMAIL,
             },
 
